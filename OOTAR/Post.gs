@@ -36,6 +36,10 @@ function test()
     accessibility: "Minimal",
     progressionBalancing: 100,
 
+    //dateDebut: "13/12/2011",
+    //dateFin: "15/01/2012",
+    //succes: "Released",
+
     kokiriForest: "Closed",
     dekuTree: "Closed",
     kakarikoGate: "Open",

@@ -1,54 +1,68 @@
 function addData(payload)
 {
-    const sheet = SpreadsheetApp
-      .getActiveSpreadsheet()
-      .getSheetByName("SoH");
-    if (!sheet)
-    {
-      throw new Error("Sheet 'SoH' not found");
-    }
+  let errors = [];
 
-    const lastRowIdx = sheet.getLastRow();
-    const insertRowIdx = lastRowIdx + 1;
-  
-    const playerInfo = parsePlayerInfo(payload, insertRowIdx);
-    const doorsInfo = parseDoorsInfo(payload);
-    const ganonInfo = parseGanonInfo(payload);
-    const dungeonInfo = parseDungeonInfo(payload);
-    const insanityInfo = parseInsanityInfo(payload);
-    const poolInfo = parsePoolInfo(payload);
-    const shopInfo = parseShopInfo(payload);
-    const extraInfo = parseExtraInfo(payload);
-    const qolInfo = parseQolInfo(payload);
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("SoH");
+  if (!sheet)
+  {
+    throw new Error("Sheet 'SoH' not found");
+  }
 
-    const allData =
-    [
-      playerInfo,
-      doorsInfo,
-      ganonInfo,
-      dungeonInfo,
-      insanityInfo,
-      poolInfo,
-      shopInfo,
-      extraInfo,
-      qolInfo
-    ];
-    sheet.appendRow(allData.flat());
+  const lastRowIdx = sheet.getLastRow();
+  const insertRowIdx = lastRowIdx + 1;
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: "ok" }))
-      .setMimeType(ContentService.MimeType.JSON);
+  const playerInfo = parsePlayerInfo(payload, insertRowIdx, errors);
+  const dateInfo = parseDateInfo(payload, errors);
+  const doorsInfo = parseDoorsInfo(payload, errors);
+  const ganonInfo = parseGanonInfo(payload, errors);
+  const dungeonInfo = parseDungeonInfo(payload, errors);
+  const insanityInfo = parseInsanityInfo(payload, errors);
+  const poolInfo = parsePoolInfo(payload, errors);
+  const shopInfo = parseShopInfo(payload, errors);
+  const extraInfo = parseExtraInfo(payload, errors);
+  const qolInfo = parseQolInfo(payload, errors);
+
+  if (errors.length > 0) 
+  {
+    throw new Error(JSON.stringify(errors));
+  }
+
+  const allData =
+  [
+    playerInfo,
+    dateInfo,
+    doorsInfo,
+    ganonInfo,
+    dungeonInfo,
+    insanityInfo,
+    poolInfo,
+    shopInfo,
+    extraInfo,
+    qolInfo
+  ];
+  sheet.appendRow(allData.flat());
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function parsePlayerInfo(payload, rowIdx)
+function parsePlayerInfo(payload, rowIdx, errors)
 {
   const logCategory = "PLAYER";
-  validateNonEmptyStringValue(payload.joueur, logCategory, "joueur")
-  validateNonEmptyStringValue(payload.goal, logCategory, "goal");
-  validateIntegerValue(payload.triforcePieces, logCategory, "triforcePieces");
-  validateIntegerValue(payload.triforcePercent, logCategory, "triforcePercent");
-  validateNonEmptyStringValue(payload.accessibility, logCategory, "accessibility");
-  validateIntegerValue(payload.progressionBalancing, logCategory, "progressionBalancing");
+
+  let validationOk = true;
+  validationOk &= validateNonEmptyStringValue(payload.joueur, logCategory, "joueur", errors)
+  validationOk &= validateNonEmptyStringValue(payload.goal, logCategory, "goal", errors);
+  validationOk &= validateIntegerValue(payload.triforcePieces, logCategory, "triforcePieces", errors);
+  validationOk &= validateIntegerValue(payload.triforcePercent, logCategory, "triforcePercent", errors);
+  validationOk &= validateNonEmptyStringValue(payload.accessibility, logCategory, "accessibility", errors);
+  validationOk &= validateIntegerValue(payload.progressionBalancing, logCategory, "progressionBalancing", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.joueur.trim(),
@@ -60,17 +74,62 @@ function parsePlayerInfo(payload, rowIdx)
   ];
 }
 
-function parseDoorsInfo(payload)
+function parseDateInfo(payload)
+{
+  let debut = "";
+  let fin = "";
+  let status = "En cours";
+
+  try
+  {
+    validateNotNullValue(payload.dateDebut, "DATE", "dateDebut");
+    debut = payload.dateDebut;
+  } catch (err)
+  {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet();
+    debut = Utilities.formatDate(new Date(), sheet.getSpreadsheetTimeZone(), "dd/MM/yyyy");
+  }
+
+  try
+  {
+    validateNotNullValue(payload.dateFin, "DATE", "dateFin");
+    fin = payload.dateFin;
+    status = "DONE";
+  } catch (err)
+  {
+  }
+  
+  try
+  {
+    validateNonEmptyStringValue(payload.succes, "DATE", "succes");
+    status = payload.succes;
+  } catch (err)
+  {
+  }
+
+  return [
+    debut,
+    fin,
+    status
+  ];
+}
+
+function parseDoorsInfo(payload, errors)
 {
   const logCategory = "DOORS";
-  validateNonEmptyStringValue(payload.kokiriForest, logCategory, "kokiriForest");
-  validateNonEmptyStringValue(payload.dekuTree, logCategory, "dekuTree");
-  validateNonEmptyStringValue(payload.kakarikoGate, logCategory, "kakarikoGate");
-  validateNonEmptyStringValue(payload.doorOfTime, logCategory, "doorOfTime");
-  validateNonEmptyStringValue(payload.sleepingWaterfall, logCategory, "sleepingWaterfall");
-  validateNonEmptyStringValue(payload.zoraFountain, logCategory, "zoraFountain");
-  validateNonEmptyStringValue(payload.jabuJabuMouth, logCategory, "jabuJabuMouth");
-  validateNonEmptyStringValue(payload.overworldDoors, logCategory, "overworldDoors");
+
+  let validationOk = true;
+  validationOk &= validateNonEmptyStringValue(payload.kokiriForest, logCategory, "kokiriForest", errors);
+  validationOk &= validateNonEmptyStringValue(payload.dekuTree, logCategory, "dekuTree", errors);
+  validationOk &= validateNonEmptyStringValue(payload.kakarikoGate, logCategory, "kakarikoGate", errors);
+  validationOk &= validateNonEmptyStringValue(payload.doorOfTime, logCategory, "doorOfTime", errors);
+  validationOk &= validateNonEmptyStringValue(payload.sleepingWaterfall, logCategory, "sleepingWaterfall", errors);
+  validationOk &= validateNonEmptyStringValue(payload.zoraFountain, logCategory, "zoraFountain", errors);
+  validationOk &= validateNonEmptyStringValue(payload.jabuJabuMouth, logCategory, "jabuJabuMouth", errors);
+  validationOk &= validateNonEmptyStringValue(payload.overworldDoors, logCategory, "overworldDoors", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.kokiriForest.trim(),
@@ -84,15 +143,20 @@ function parseDoorsInfo(payload)
   ];
 }
 
-function parseGanonInfo(payload)
+function parseGanonInfo(payload, errors)
 {
   const logCategory = "GANON";
-  validateNonEmptyStringValue(payload.startAge, logCategory, "startAge");
-  validateNonEmptyStringValue(payload.rainbowBridgeCondition, logCategory, "rainbowBridgeCondition");
-  validateIntegerValue(payload.rainbowBridgeValue, logCategory, "rainbowBridgeValue");
-  validateNonEmptyStringValue(payload.ganonTrials, logCategory, "ganonTrials");
-  validateNonEmptyStringValue(payload.ganonBossKeyCondition, logCategory, "ganonBossKeyCondition");
-  validateIntegerValue(payload.ganonBossKeyValue, logCategory, "ganonBossKeyValue");
+
+  let validationOk = true;
+  validationOk &= validateNonEmptyStringValue(payload.startAge, logCategory, "startAge", errors);
+  validationOk &= validateNonEmptyStringValue(payload.rainbowBridgeCondition, logCategory, "rainbowBridgeCondition", errors);
+  validationOk &= validateIntegerValue(payload.rainbowBridgeValue, logCategory, "rainbowBridgeValue", errors);
+  validationOk &= validateNonEmptyStringValue(payload.ganonTrials, logCategory, "ganonTrials", errors);
+  validationOk &= validateNonEmptyStringValue(payload.ganonBossKeyCondition, logCategory, "ganonBossKeyCondition", errors);
+  validationOk &= validateIntegerValue(payload.ganonBossKeyValue, logCategory, "ganonBossKeyValue", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.startAge.trim(),
@@ -104,20 +168,25 @@ function parseGanonInfo(payload)
   ];
 }
 
-function parseDungeonInfo(payload)
+function parseDungeonInfo(payload, errors)
 {
   const logCategory = "DUNGEON";
-  validateNonEmptyStringValue(payload.mapsAndCompasses, logCategory, "mapsAndCompasses");
-  validateBooleanValue(payload.bottomOfTheWellKeyrings, logCategory, "bottomOfTheWellKeyrings");
-  validateBooleanValue(payload.forestTempleKeyrings, logCategory, "forestTempleKeyrings");
-  validateBooleanValue(payload.fireTempleKeyrings, logCategory, "fireTempleKeyrings");
-  validateBooleanValue(payload.waterTempleKeyrings, logCategory, "waterTempleKeyrings");
-  validateBooleanValue(payload.shadowTempleKeyrings, logCategory, "shadowTempleKeyrings");
-  validateBooleanValue(payload.spiritTempleKeyrings, logCategory, "spiritTempleKeyrings");
-  validateBooleanValue(payload.gerudoFortressKeyrings, logCategory, "gerudoFortressKeyrings");
-  validateNonEmptyStringValue(payload.fortressCarpenters, logCategory, "fortressCarpenters");
-  validateBooleanValue(payload.gerudoTrainingGroundsKeyrings, logCategory, "gerudoTrainingGroundsKeyrings");
-  validateBooleanValue(payload.ganonsCastleKeyrings, logCategory, "ganonsCastleKeyrings");
+
+  let validationOk = true;
+  validationOk &= validateNonEmptyStringValue(payload.mapsAndCompasses, logCategory, "mapsAndCompasses", errors);
+  validationOk &= validateBooleanValue(payload.bottomOfTheWellKeyrings, logCategory, "bottomOfTheWellKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.forestTempleKeyrings, logCategory, "forestTempleKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.fireTempleKeyrings, logCategory, "fireTempleKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.waterTempleKeyrings, logCategory, "waterTempleKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.shadowTempleKeyrings, logCategory, "shadowTempleKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.spiritTempleKeyrings, logCategory, "spiritTempleKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.gerudoFortressKeyrings, logCategory, "gerudoFortressKeyrings", errors);
+  validationOk &= validateNonEmptyStringValue(payload.fortressCarpenters, logCategory, "fortressCarpenters", errors);
+  validationOk &= validateBooleanValue(payload.gerudoTrainingGroundsKeyrings, logCategory, "gerudoTrainingGroundsKeyrings", errors);
+  validationOk &= validateBooleanValue(payload.ganonsCastleKeyrings, logCategory, "ganonsCastleKeyrings", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.mapsAndCompasses.trim(),
@@ -134,28 +203,33 @@ function parseDungeonInfo(payload)
   ];
 }
 
-function parseInsanityInfo(payload)
+function parseInsanityInfo(payload, errors)
 {
   const logCategory = "SANITY";
-  validateNonEmptyStringValue(payload.masterSwordSanity, logCategory, "masterSwordSanity");
-  validateNonEmptyStringValue(payload.kokiriSwordSanity, logCategory, "kokiriSwordSanity");
-  validateNonEmptyStringValue(payload.tokensanity, logCategory, "tokensanity");
-  validateNonEmptyStringValue(payload.freestandingsanity, logCategory, "freestandingsanity");
-  validateNonEmptyStringValue(payload.potsanity, logCategory, "potsanity");
-  validateNonEmptyStringValue(payload.cratesanity, logCategory, "cratesanity");
-  validateNonEmptyStringValue(payload.grasssanity, logCategory, "grasssanity");
-  validateNonEmptyStringValue(payload.fishsanity, logCategory, "fishsanity");
-  validateBooleanValue(payload.beehivesanity, logCategory, "beehivesanity");
-  validateBooleanValue(payload.cowsanity, logCategory, "cowsanity");
-  validateBooleanValue(payload.treesanity, logCategory, "treesanity");
-  validateNonEmptyStringValue(payload.bossSoulSanity, logCategory, "bossSoulSanity");
-  validateBooleanValue(payload.frogsanity, logCategory, "frogsanity");
-  validateNonEmptyStringValue(payload.ocarinasanity, logCategory, "ocarinasanity");
-  validateBooleanValue(payload.ocarinaButtonSanity, logCategory, "ocarinaButtonSanity");
-  validateBooleanValue(payload.fairysanityFountains, logCategory, "fairysanityFountains");
-  validateBooleanValue(payload.fairysanityStones, logCategory, "fairysanityStones");
-  validateBooleanValue(payload.fairysanityBeans, logCategory, "fairysanityBeans");
-  validateBooleanValue(payload.fairysanitySongs, logCategory, "fairysanitySongs");
+
+  let validationOk = true;
+  validationOk &= validateNonEmptyStringValue(payload.masterSwordSanity, logCategory, "masterSwordSanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.kokiriSwordSanity, logCategory, "kokiriSwordSanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.tokensanity, logCategory, "tokensanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.freestandingsanity, logCategory, "freestandingsanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.potsanity, logCategory, "potsanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.cratesanity, logCategory, "cratesanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.grasssanity, logCategory, "grasssanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.fishsanity, logCategory, "fishsanity", errors);
+  validationOk &= validateBooleanValue(payload.beehivesanity, logCategory, "beehivesanity", errors);
+  validationOk &= validateBooleanValue(payload.cowsanity, logCategory, "cowsanity", errors);
+  validationOk &= validateBooleanValue(payload.treesanity, logCategory, "treesanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.bossSoulSanity, logCategory, "bossSoulSanity", errors);
+  validationOk &= validateBooleanValue(payload.frogsanity, logCategory, "frogsanity", errors);
+  validationOk &= validateNonEmptyStringValue(payload.ocarinasanity, logCategory, "ocarinasanity", errors);
+  validationOk &= validateBooleanValue(payload.ocarinaButtonSanity, logCategory, "ocarinaButtonSanity", errors);
+  validationOk &= validateBooleanValue(payload.fairysanityFountains, logCategory, "fairysanityFountains", errors);
+  validationOk &= validateBooleanValue(payload.fairysanityStones, logCategory, "fairysanityStones", errors);
+  validationOk &= validateBooleanValue(payload.fairysanityBeans, logCategory, "fairysanityBeans", errors);
+  validationOk &= validateBooleanValue(payload.fairysanitySongs, logCategory, "fairysanitySongs", errors);
+
+  if (!validationOk)
+    return [];
   
   return [
     payload.masterSwordSanity.trim(),
@@ -180,23 +254,28 @@ function parseInsanityInfo(payload)
   ];
 }
 
-function parsePoolInfo(payload)
+function parsePoolInfo(payload, errors)
 {
   const logCategory = "POOL";
-  validateNonEmptyStringValue(payload.poolBalancing, logCategory, "poolBalancing");
-  validateNonEmptyStringValue(payload.childWallet, logCategory, "childWallet");
-  validateNonEmptyStringValue(payload.tycoonWallet, logCategory, "tycoonWallet");
-  validateNonEmptyStringValue(payload.bronzeScale, logCategory, "bronzeScale");
-  validateNonEmptyStringValue(payload.stickBag, logCategory, "stickBag");
-  validateNonEmptyStringValue(payload.nutBag, logCategory, "nutBag");
-  validateNonEmptyStringValue(payload.bombchuBag, logCategory, "bombchuBag");
-  validateNonEmptyStringValue(payload.weirdEgg, logCategory, "weirdEgg");
-  validateNonEmptyStringValue(payload.adultTrade, logCategory, "adultTrade");
-  validateNonEmptyStringValue(payload.gerudoCard, logCategory, "gerudoCard");
-  validateNonEmptyStringValue(payload.fishingPole, logCategory, "fishingPole");
-  validateNonEmptyStringValue(payload.skeletonKey, logCategory, "skeletonKey");
-  validateNonEmptyStringValue(payload.rocsFeather, logCategory, "rocsFeather");
-  validateNonEmptyStringValue(payload.dungeonRewards, logCategory, "dungeonRewards");
+
+  let validationOk = true;
+  validationOk &= validateNonEmptyStringValue(payload.poolBalancing, logCategory, "poolBalancing", errors);
+  validationOk &= validateNonEmptyStringValue(payload.childWallet, logCategory, "childWallet", errors);
+  validationOk &= validateNonEmptyStringValue(payload.tycoonWallet, logCategory, "tycoonWallet", errors);
+  validationOk &= validateNonEmptyStringValue(payload.bronzeScale, logCategory, "bronzeScale", errors);
+  validationOk &= validateNonEmptyStringValue(payload.stickBag, logCategory, "stickBag", errors);
+  validationOk &= validateNonEmptyStringValue(payload.nutBag, logCategory, "nutBag", errors);
+  validationOk &= validateNonEmptyStringValue(payload.bombchuBag, logCategory, "bombchuBag", errors);
+  validationOk &= validateNonEmptyStringValue(payload.weirdEgg, logCategory, "weirdEgg", errors);
+  validationOk &= validateNonEmptyStringValue(payload.adultTrade, logCategory, "adultTrade", errors);
+  validationOk &= validateNonEmptyStringValue(payload.gerudoCard, logCategory, "gerudoCard", errors);
+  validationOk &= validateNonEmptyStringValue(payload.fishingPole, logCategory, "fishingPole", errors);
+  validationOk &= validateNonEmptyStringValue(payload.skeletonKey, logCategory, "skeletonKey", errors);
+  validationOk &= validateNonEmptyStringValue(payload.rocsFeather, logCategory, "rocsFeather", errors);
+  validationOk &= validateNonEmptyStringValue(payload.dungeonRewards, logCategory, "dungeonRewards", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.poolBalancing.trim(),
@@ -216,13 +295,18 @@ function parsePoolInfo(payload)
   ];
 }
 
-function parseShopInfo(payload)
+function parseShopInfo(payload, errors)
 {
   const logCategory = "SHOP";
-  validateBooleanValue(payload.shuffleShops, logCategory, "shuffleShops");
-  validateIntegerValue(payload.shuffleShopsItems, logCategory, "shuffleShopsItems");
-  validateBooleanValue(payload.shuffleScrubs, logCategory, "shuffleScrubs");
-  validateNonEmptyStringValue(payload.shuffleMerchants, logCategory, "shuffleMerchants");
+
+  let validationOk = true;
+  validationOk &= validateBooleanValue(payload.shuffleShops, logCategory, "shuffleShops", errors);
+  validationOk &= validateIntegerValue(payload.shuffleShopsItems, logCategory, "shuffleShopsItems", errors);
+  validationOk &= validateBooleanValue(payload.shuffleScrubs, logCategory, "shuffleScrubs", errors);
+  validationOk &= validateNonEmptyStringValue(payload.shuffleMerchants, logCategory, "shuffleMerchants", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.shuffleShops,
@@ -232,14 +316,19 @@ function parseShopInfo(payload)
   ];
 }
 
-function parseExtraInfo(payload)
+function parseExtraInfo(payload, errors)
 {
   const logCategory = "EXTRA";
-  validateBooleanValue(payload.token100, logCategory, "token100");
-  validateBooleanValue(payload.skipChildZelda, logCategory, "skipChildZelda");
-  validateBooleanValue(payload.skipEponaRace, logCategory, "skipEponaRace");
-  validateIntegerValue(payload.iceTrapsCount, logCategory, "iceTrapsCount");
-  validateIntegerValue(payload.iceTrapsPercent, logCategory, "iceTrapsPercent");
+  
+  let validationOk = true;
+  validationOk &= validateBooleanValue(payload.token100, logCategory, "token100", errors);
+  validationOk &= validateBooleanValue(payload.skipChildZelda, logCategory, "skipChildZelda", errors);
+  validationOk &= validateBooleanValue(payload.skipEponaRace, logCategory, "skipEponaRace", errors);
+  validationOk &= validateIntegerValue(payload.iceTrapsCount, logCategory, "iceTrapsCount", errors);
+  validationOk &= validateIntegerValue(payload.iceTrapsPercent, logCategory, "iceTrapsPercent", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.token100,
@@ -250,11 +339,16 @@ function parseExtraInfo(payload)
   ];
 }
 
-function parseQolInfo(payload)
+function parseQolInfo(payload, errors)
 {
   const logCategory = "QOL";
-  validateBooleanValue(payload.fullWallets, logCategory, "fullWallets");
-  validateNonEmptyStringValue(payload.infiniteUpgrades, logCategory, "infiniteUpgrades");
+  
+  let validationOk = true;
+  validationOk &= validateBooleanValue(payload.fullWallets, logCategory, "fullWallets", errors);
+  validationOk &= validateNonEmptyStringValue(payload.infiniteUpgrades, logCategory, "infiniteUpgrades", errors);
+
+  if (!validationOk)
+    return [];
 
   return [
     payload.fullWallets,
